@@ -170,6 +170,19 @@ Open **`http://localhost:5173`** or **`http://localhost:5174`** in your browser.
 
 ---
 
+## ▲ Vercel Deployment
+
+Yahoo Pulse is pre-configured for **Vercel deployment** via `vercel.json`:
+1. Go to [Vercel](https://vercel.com/new) and click **Import** next to `yashinrush/yahoo-plus`.
+2. Keep the Root Directory as `./` (leave default).
+3. Add Environment Variables in the Vercel dashboard:
+   * `GNEWS_API_KEY`: `your_gnews_api_key_here`
+   * `GEMINI_API_KEY`: `your_google_gemini_api_key_here`
+   * `JWT_SECRET`: `yahoo-pulse-jwt-super-secret-key-2026`
+4. Click **Deploy**. Vercel will build the client SPA and route `/api/*` through the serverless handler!
+
+---
+
 ## 🐳 Docker Deployment
 
 Run the complete multi-stage containerized stack with a single command:

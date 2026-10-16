@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id                  String           @id @default(cuid())
+  email               String           @unique
+  passwordHash        String
+  name                String           @default("Taro")
+  avatar              String?
+  region              String           @default("tokyo")
+  preferredCategories String           @default("technology,economy,sports")
+  points              Int              @default(1230)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  bookmarks           Bookmark[]
+  history             ReadingHistory[]
+}
+
+model Article {
+  id          String           @id @default(cuid())
+  title       String
+  description String
+  content     String?
+  url         String           @unique
+  imageUrl    String?
+  sourceName  String
+  sourceUrl   String?
+  category    String
+  publishedAt String
+  createdAt   DateTime         @default(now())
+  bookmarks   Bookmark[]
+  history     ReadingHistory[]
+  aiSummary   AISummary?
+
+  @@index([category])
+  @@index([createdAt])
+}
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  articleId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId])
+  @@index([userId])
+}
+
+model ReadingHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  articleId String
+  viewedAt  DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([viewedAt])
+}
+
+model AISummary {
+  id        String   @id @default(cuid())
+  articleId String   @unique
+  summary   String
+  keyPoints String   // JSON-encoded array of key bullet points
+  model     String   @default("gemini-1.5-flash")
+  createdAt DateTime @default(now())
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+}

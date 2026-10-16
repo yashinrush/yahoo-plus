@@ -1,0 +1,31 @@
+{
+  "name": "yahoo-pulse",
+  "version": "1.0.0",
+  "description": "AI-Powered Personalized News Platform inspired by Yahoo! JAPAN",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build:server": "npm --prefix server run build",
+    "build:client": "npm --prefix client run build",
+    "build": "npm run build:server && npm run build:client",
+    "start": "node server/dist/server.js",
+    "prisma:seed": "npm --prefix server run prisma:seed"
+  },
+  "keywords": [
+    "yahoo-japan",
+    "news-platform",
+    "react",
+    "express",
+    "typescript",
+    "prisma",
+    "gemini-ai",
+    "line-yahoo"
+  ],
+  "author": "Yahoo Pulse Team",
+  "license": "MIT"
+}

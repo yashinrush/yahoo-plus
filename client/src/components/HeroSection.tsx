@@ -94,16 +94,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 {mainArticle.title}
               </h2>
 
-              <div className="flex items-center justify-between text-xs text-slate-200 pt-1">
-                <div className="flex items-center gap-3">
-                  <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-xs text-slate-200 pt-1">
+                {/* Left Metadata Group */}
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0">
                     {mainArticle.category}
                   </span>
-                  <span>{mainArticle.publishedAt}</span>
+                  <span className="text-[11px] text-slate-300 shrink-0">{mainArticle.publishedAt}</span>
                   <button
                     type="button"
                     onClick={() => onSelectArticle && onSelectArticle(mainArticle)}
-                    className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer"
+                    className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer shrink-0"
                   >
                     <ThumbsUp className="w-3 h-3 text-slate-300" />
                     <span>{mainArticle.likesCount ? (mainArticle.likesCount > 999 ? `${(mainArticle.likesCount/1000).toFixed(1)}k` : mainArticle.likesCount) : '1.2k'}</span>
@@ -111,33 +112,34 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   <button
                     type="button"
                     onClick={() => onSelectArticle && onSelectArticle(mainArticle)}
-                    className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer"
+                    className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer shrink-0"
                   >
                     <MessageSquare className="w-3 h-3 text-slate-300" />
                     <span>{mainArticle.commentsCount || 86}</span>
                   </button>
                 </div>
 
-                <div className="flex items-center gap-2">
+                {/* Right Action Buttons: Comments & AI Summary */}
+                <div className="flex items-center gap-2 shrink-0">
                   {/* Comments Drawer Button */}
                   <button
                     type="button"
                     onClick={() => onSelectArticle && onSelectArticle(mainArticle)}
-                    className="flex items-center gap-1 text-[11px] font-bold bg-[#e60012] hover:bg-red-700 text-white px-2 py-0.5 rounded transition-colors cursor-pointer shadow-2xs"
+                    className="whitespace-nowrap flex items-center gap-1 text-[11px] font-bold bg-[#e60012] hover:bg-red-700 text-white h-7 px-2.5 py-1 rounded transition-colors cursor-pointer shadow-2xs shrink-0"
                   >
-                    <MessageSquare className="w-3 h-3" />
-                    <span>{lang === 'ja' ? 'ヤフコメ' : 'Discuss'}</span>
+                    <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+                    <span>{lang === 'ja' ? 'ヤフコメ' : 'Comments'}</span>
                   </button>
 
                   {/* AI Summary Toggle Button */}
                   <button
                     type="button"
                     onClick={handleToggleSummary}
-                    className="flex items-center gap-1 text-[11px] font-bold bg-white/20 hover:bg-white/30 backdrop-blur-xs px-2 py-0.5 rounded transition-colors cursor-pointer"
+                    className="whitespace-nowrap flex items-center gap-1 text-[11px] font-bold bg-white/20 hover:bg-white/30 backdrop-blur-xs text-white h-7 px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0"
                   >
-                    <Sparkles className="w-3 h-3 text-amber-300" />
-                    <span>{t('aiSummaryBtn')}</span>
-                    {showAiSummary ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                    <span>{lang === 'ja' ? 'AI要約' : 'AI Summary'}</span>
+                    {showAiSummary ? <ChevronUp className="w-3.5 h-3.5 shrink-0" /> : <ChevronDown className="w-3.5 h-3.5 shrink-0" />}
                   </button>
                 </div>
               </div>

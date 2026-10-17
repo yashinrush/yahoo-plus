@@ -11,6 +11,11 @@ import {
   Clock,
   Flame,
   CheckCircle2,
+  Volume2,
+  VolumeX,
+  Copy,
+  Check,
+  RotateCw,
 } from 'lucide-react';
 import type { Article, UserComment, DiscussionSentiment } from '../types/index.js';
 import { useLanguage } from '../context/LanguageContext.js';
@@ -19,6 +24,13 @@ interface ArticleCommentsDrawerProps {
   article: Article | null;
   isOpen: boolean;
   onClose: () => void;
+}
+
+interface AISummaryState {
+  summary: string;
+  keyPoints: string[];
+  model?: string;
+  cached?: boolean;
 }
 
 export const ArticleCommentsDrawer: React.FC<ArticleCommentsDrawerProps> = ({
@@ -36,6 +48,12 @@ export const ArticleCommentsDrawer: React.FC<ArticleCommentsDrawerProps> = ({
   const [likedCommentIds, setLikedCommentIds] = useState<Set<string>>(new Set());
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
+  // AI Summarizer State
+  const [summaryData, setSummaryData] = useState<AISummaryState | null>(null);
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [copiedSummary, setCopiedSummary] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+
   // Close on Escape key press
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -46,6 +64,14 @@ export const ArticleCommentsDrawer: React.FC<ArticleCommentsDrawerProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  // Cancel any ongoing audio speech synthesis when drawer closes
+  useEffect(() => {
+    if (!isOpen && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      setIsPlayingAudio(false);
+    }
+  }, [isOpen]);
 
   // Fetch comments and AI sentiment for current article
   const fetchComments = useCallback(async () => {
@@ -72,16 +98,95 @@ export const ArticleCommentsDrawer: React.FC<ArticleCommentsDrawerProps> = ({
     }
   }, [article, sortBy, lang]);
 
+  // Generate or fetch AI summary with Gemini 2.5 Flash
+  const fetchOrGenerateSummary = useCallback(
+    async (forceRegenerate = false) => {
+      if (!article) return;
+      if (!forceRegenerate && article.aiSummary) {
+        setSummaryData(article.aiSummary);
+        return;
+      }
+
+      setIsSummarizing(true);
+      try {
+        const res = await fetch('/api/news/summarize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            articleId: article.id,
+            title: article.title,
+            description: article.description,
+            url: article.url,
+            lang,
+          }),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data) {
+            setSummaryData(json.data);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to generate summary:', err);
+      } finally {
+        setIsSummarizing(false);
+      }
+    },
+    [article, lang]
+  );
+
   useEffect(() => {
     if (isOpen && article) {
       fetchComments();
+      // Auto-load or generate summary for seamless instant reading
+      fetchOrGenerateSummary(false);
     } else {
       setComments([]);
       setSentiment(null);
+      setSummaryData(null);
       setNewCommentText('');
       setSubmitSuccess(false);
+      setIsPlayingAudio(false);
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
     }
-  }, [isOpen, article, fetchComments]);
+  }, [isOpen, article, fetchComments, fetchOrGenerateSummary]);
+
+  // Audio Speech Synthesis (TTS)
+  const toggleAudioTTS = () => {
+    if (!('speechSynthesis' in window)) return;
+
+    if (isPlayingAudio) {
+      window.speechSynthesis.cancel();
+      setIsPlayingAudio(false);
+    } else if (summaryData) {
+      window.speechSynthesis.cancel();
+      const pointsText = summaryData.keyPoints?.join('. ') || '';
+      const textToRead = `${summaryData.summary}. ${pointsText}`;
+      const utterance = new SpeechSynthesisUtterance(textToRead);
+      utterance.lang = lang === 'ja' ? 'ja-JP' : 'en-US';
+      utterance.rate = 1.05;
+      utterance.onend = () => setIsPlayingAudio(false);
+      utterance.onerror = () => setIsPlayingAudio(false);
+      setIsPlayingAudio(true);
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  // Copy Summary to Clipboard
+  const handleCopySummary = () => {
+    if (!summaryData || !article) return;
+    const pointsFormatted = summaryData.keyPoints
+      ? summaryData.keyPoints.map((p, i) => `${i + 1}. ${p}`).join('\n')
+      : '';
+    const text = `【${article.title}】\n\n${summaryData.summary}\n\n${
+      lang === 'ja' ? '【重要ポイント】' : '【Key Takeaways】'
+    }\n${pointsFormatted}`;
+    navigator.clipboard.writeText(text);
+    setCopiedSummary(true);
+    setTimeout(() => setCopiedSummary(false), 2000);
+  };
 
   // Handle post new comment
   const handleSubmitComment = async (e: React.FormEvent) => {
@@ -169,11 +274,11 @@ export const ArticleCommentsDrawer: React.FC<ArticleCommentsDrawerProps> = ({
       />
 
       {/* Drawer Container */}
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">
         <div className="w-screen max-w-2xl bg-white shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out border-l border-slate-200">
           
           {/* Top Sticky Header */}
-          <div className="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50/90 backdrop-blur-xs sticky top-0 z-10">
+          <div className="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50/95 backdrop-blur-xs sticky top-0 z-10">
             <div className="flex items-center gap-2">
               <span className="bg-[#e60012] text-white text-[10px] font-black px-1.5 py-0.5 rounded tracking-wider">
                 Y! NEWS
@@ -247,23 +352,137 @@ export const ArticleCommentsDrawer: React.FC<ArticleCommentsDrawerProps> = ({
               )}
             </div>
 
-            {/* AI Summary Card (if article has summary) */}
-            {article.aiSummary && (
-              <div className="p-4 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 rounded-lg border border-blue-100 text-xs space-y-2">
-                <div className="flex items-center gap-1.5 font-bold text-blue-900">
-                  <Sparkles className="w-3.5 h-3.5 text-blue-600 animate-spin" />
-                  <span>{lang === 'ja' ? 'Gemini 2.5 Flash AI要約' : 'Gemini AI Executive Summary'}</span>
+            {/* ========================================================================= */}
+            {/* INTERACTIVE GEMINI AI SUMMARIZER FEATURE (FAST, CRISP, WITH AUDIO & COPY) */}
+            {/* ========================================================================= */}
+            {summaryData ? (
+              <div className="p-4 rounded-xl bg-gradient-to-br from-slate-900 via-slate-850 to-slate-900 text-white shadow-md border border-slate-700/80 space-y-3 animate-fadeIn">
+                {/* Top Header Row with Model Pill & Actions */}
+                <div className="flex items-center justify-between border-b border-slate-700/80 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-md bg-blue-500/20 border border-blue-400/40 flex items-center justify-center text-blue-300">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-bold text-white tracking-wide">
+                        {lang === 'ja' ? 'Gemini 2.5 Flash AI要約' : 'Gemini AI Executive Summary'}
+                      </span>
+                      <span className="text-[10px] text-emerald-400 bg-emerald-950/80 border border-emerald-500/40 px-1.5 py-0.2 rounded font-mono">
+                        {summaryData.cached ? '⚡ Cached (0.3ms)' : '✨ Live Generated'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Utility Controls: Audio TTS, Copy, Refresh */}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={toggleAudioTTS}
+                      title={isPlayingAudio ? 'Stop reading' : 'Read aloud with AI voice'}
+                      className={`px-2 py-1 rounded text-xs flex items-center gap-1 transition-colors cursor-pointer border ${
+                        isPlayingAudio
+                          ? 'bg-rose-500/20 border-rose-500/50 text-rose-300 animate-pulse font-bold'
+                          : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      {isPlayingAudio ? (
+                        <>
+                          <VolumeX className="w-3.5 h-3.5 text-rose-400" />
+                          <span className="text-[10px]">{lang === 'ja' ? '停止' : 'Stop'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Volume2 className="w-3.5 h-3.5 text-blue-300" />
+                          <span className="text-[10px]">{lang === 'ja' ? '音声' : 'Listen'}</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleCopySummary}
+                      title="Copy summary to clipboard"
+                      className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer text-xs"
+                    >
+                      {copiedSummary ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => fetchOrGenerateSummary(true)}
+                      disabled={isSummarizing}
+                      title="Regenerate summary"
+                      className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer text-xs disabled:opacity-50"
+                    >
+                      <RotateCw className={`w-3.5 h-3.5 ${isSummarizing ? 'animate-spin text-blue-400' : ''}`} />
+                    </button>
+                  </div>
                 </div>
-                <p className="text-slate-700 leading-relaxed font-medium">
-                  {article.aiSummary.summary}
+
+                {/* Executive Overview */}
+                <p className="text-xs text-slate-200 leading-relaxed font-normal bg-black/25 p-3 rounded-lg border border-slate-750/70">
+                  {summaryData.summary}
                 </p>
-                {article.aiSummary.keyPoints && article.aiSummary.keyPoints.length > 0 && (
-                  <ul className="list-disc list-inside space-y-1 text-slate-600 pl-1">
-                    {article.aiSummary.keyPoints.map((pt, idx) => (
-                      <li key={idx}>{pt}</li>
-                    ))}
-                  </ul>
+
+                {/* 3 Key Takeaways */}
+                {summaryData.keyPoints && summaryData.keyPoints.length > 0 && (
+                  <div className="space-y-1.5 pt-0.5">
+                    <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-blue-400" />
+                      <span>{lang === 'ja' ? '重要論点・キーポイント' : 'Key Takeaways'}</span>
+                    </div>
+                    <div className="grid gap-1.5">
+                      {summaryData.keyPoints.map((pt, idx) => (
+                        <div key={idx} className="flex items-start gap-2 bg-slate-800/60 p-2.5 rounded-lg text-xs text-slate-200 border border-slate-700/50">
+                          <span className="w-4 h-4 rounded-full bg-blue-500/20 border border-blue-400/40 text-blue-300 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                            {idx + 1}
+                          </span>
+                          <span className="leading-snug">{pt}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
+              </div>
+            ) : (
+              /* Prompt state: Generate button */
+              <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-50/90 via-blue-50/80 to-purple-50/90 border border-blue-200/90 shadow-2xs space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-xs shrink-0 mt-0.5">
+                      <Sparkles className="w-4 h-4 text-amber-200" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                        <span>{lang === 'ja' ? 'Gemini 2.5 Flash AI要約' : 'Gemini AI Executive Summary'}</span>
+                        <span className="text-[10px] bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded">NEW</span>
+                      </h4>
+                      <p className="text-[11px] text-slate-600 mt-0.5">
+                        {lang === 'ja'
+                          ? '長文ニュースの核心と重要論点を30秒で把握できるエグゼクティブ要約を生成します'
+                          : 'Generate instant key bullet takeaways and editorial synthesis with Google Gemini'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => fetchOrGenerateSummary(true)}
+                    disabled={isSummarizing}
+                    className="px-4 py-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white rounded-lg text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer hover:shadow-md active:scale-98 disabled:opacity-60 whitespace-nowrap shrink-0"
+                  >
+                    {isSummarizing ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>{lang === 'ja' ? 'Gemini AI が要約中...' : 'Generating Summary...'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                        <span>{lang === 'ja' ? 'AI要約を生成' : 'Generate AI Summary'}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             )}
 

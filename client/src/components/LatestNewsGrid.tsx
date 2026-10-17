@@ -243,7 +243,11 @@ const DEFAULT_LATEST_BY_FILTER: Record<string, LatestItem[]> = {
   ],
 };
 
-export const LatestNewsGrid: React.FC = () => {
+interface LatestNewsGridProps {
+  onSelectArticle?: (article: any) => void;
+}
+
+export const LatestNewsGrid: React.FC<LatestNewsGridProps> = ({ onSelectArticle }) => {
   const { lang, t } = useLanguage();
   const [activeSubFilter, setActiveSubFilter] = useState('all');
   const [items, setItems] = useState<LatestItem[]>(DEFAULT_LATEST_BY_FILTER.all);
@@ -337,7 +341,23 @@ export const LatestNewsGrid: React.FC = () => {
           <div
             key={item.id}
             className="flex flex-col justify-between group cursor-pointer"
-            onClick={() => window.open(item.url, '_blank')}
+            onClick={() => {
+              if (onSelectArticle) {
+                onSelectArticle({
+                  id: item.id,
+                  title: item.title,
+                  description: item.title,
+                  category: item.category,
+                  publishedAt: item.publishedAt,
+                  image: item.image,
+                  url: item.url,
+                  commentsCount: item.comments,
+                  source: { name: 'Yahoo! 最新ニュース' },
+                });
+              } else {
+                window.open(item.url, '_blank');
+              }
+            }}
           >
             <div>
               <div className="rounded-md overflow-hidden h-24 bg-slate-100 border border-slate-200/80 mb-2">

@@ -19,6 +19,7 @@ interface SummaryData {
 export const HeroSection: React.FC<HeroSectionProps> = ({
   mainArticle,
   subArticles,
+  onSelectArticle,
 }) => {
   const { lang, t } = useLanguage();
   const [showAiSummary, setShowAiSummary] = useState(false);
@@ -71,10 +72,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               onError={(e) => {
                 (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=1200&q=80';
               }}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90 cursor-pointer"
+              onClick={() => onSelectArticle && onSelectArticle(mainArticle)}
             />
             {/* Dark gradient overlay for text readability */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20 pointer-events-none" />
 
             {/* Top-left "主要ニュース" Badge */}
             <div className="absolute top-3 left-3">
@@ -85,10 +87,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
             {/* Bottom Content Overlay */}
             <div className="absolute bottom-0 left-0 right-0 p-4 text-white space-y-2">
-              <h2 className="text-base sm:text-lg font-bold leading-snug line-clamp-2 hover:underline cursor-pointer">
-                <a href={mainArticle.url} target="_blank" rel="noopener noreferrer">
-                  {mainArticle.title}
-                </a>
+              <h2
+                onClick={() => onSelectArticle && onSelectArticle(mainArticle)}
+                className="text-base sm:text-lg font-bold leading-snug line-clamp-2 hover:underline cursor-pointer"
+              >
+                {mainArticle.title}
               </h2>
 
               <div className="flex items-center justify-between text-xs text-slate-200 pt-1">
@@ -97,26 +100,46 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                     {mainArticle.category}
                   </span>
                   <span>{mainArticle.publishedAt}</span>
-                  <span className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onSelectArticle && onSelectArticle(mainArticle)}
+                    className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer"
+                  >
                     <ThumbsUp className="w-3 h-3 text-slate-300" />
                     <span>{mainArticle.likesCount ? (mainArticle.likesCount > 999 ? `${(mainArticle.likesCount/1000).toFixed(1)}k` : mainArticle.likesCount) : '1.2k'}</span>
-                  </span>
-                  <span className="flex items-center gap-1">
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSelectArticle && onSelectArticle(mainArticle)}
+                    className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer"
+                  >
                     <MessageSquare className="w-3 h-3 text-slate-300" />
                     <span>{mainArticle.commentsCount || 86}</span>
-                  </span>
+                  </button>
                 </div>
 
-                {/* AI Summary Toggle Button */}
-                <button
-                  type="button"
-                  onClick={handleToggleSummary}
-                  className="flex items-center gap-1 text-[11px] font-bold bg-white/20 hover:bg-white/30 backdrop-blur-xs px-2 py-0.5 rounded transition-colors cursor-pointer"
-                >
-                  <Sparkles className="w-3 h-3 text-amber-300" />
-                  <span>{t('aiSummaryBtn')}</span>
-                  {showAiSummary ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* Comments Drawer Button */}
+                  <button
+                    type="button"
+                    onClick={() => onSelectArticle && onSelectArticle(mainArticle)}
+                    className="flex items-center gap-1 text-[11px] font-bold bg-[#e60012] hover:bg-red-700 text-white px-2 py-0.5 rounded transition-colors cursor-pointer shadow-2xs"
+                  >
+                    <MessageSquare className="w-3 h-3" />
+                    <span>{lang === 'ja' ? 'ヤフコメ' : 'Discuss'}</span>
+                  </button>
+
+                  {/* AI Summary Toggle Button */}
+                  <button
+                    type="button"
+                    onClick={handleToggleSummary}
+                    className="flex items-center gap-1 text-[11px] font-bold bg-white/20 hover:bg-white/30 backdrop-blur-xs px-2 py-0.5 rounded transition-colors cursor-pointer"
+                  >
+                    <Sparkles className="w-3 h-3 text-amber-300" />
+                    <span>{t('aiSummaryBtn')}</span>
+                    {showAiSummary ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -169,6 +192,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           {subArticles.slice(0, 4).map((sub, idx) => (
             <div
               key={sub.id || idx}
+              onClick={() => onSelectArticle && onSelectArticle(sub)}
               className="py-2.5 first:pt-0 last:pb-0 flex items-center gap-3 group cursor-pointer"
             >
               <div className="w-24 h-16 rounded overflow-hidden shrink-0 bg-slate-100 border border-slate-200/80">
@@ -184,9 +208,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
               <div className="flex-1 min-w-0">
                 <h3 className="text-xs font-bold text-slate-800 leading-snug group-hover:text-blue-600 transition-colors line-clamp-2">
-                  <a href={sub.url} target="_blank" rel="noopener noreferrer">
-                    {sub.title}
-                  </a>
+                  {sub.title}
                 </h3>
 
                 <div className="mt-1 flex items-center gap-2 text-[10px] text-slate-400">

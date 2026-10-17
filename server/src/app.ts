@@ -10,6 +10,7 @@ import { authRouter } from './routes/auth.routes.js';
 import { userRouter } from './routes/user.routes.js';
 import { trendingRouter } from './routes/trending.routes.js';
 import { abRouter } from './routes/abtest.routes.js';
+import { commentsRouter } from './routes/comments.routes.js';
 
 export const app = express();
 
@@ -35,6 +36,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/user', userRouter);
 app.use('/api/trending', trendingRouter);
 app.use('/api/ab', abRouter);
+app.use('/api/comments', commentsRouter);
 
 // Serve frontend build in production
 const clientDistPath = path.resolve(process.cwd(), '../client/dist');

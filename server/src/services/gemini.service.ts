@@ -189,3 +189,147 @@ function generateEditorialFallback(title: string, description: string, lang: 'ja
     ],
   };
 }
+
+export interface DiscussionSentimentResult {
+  sentimentScore: number; // 0 to 100 (% positive/supportive)
+  label: 'Supportive' | 'Critical' | 'Mixed' | 'Neutral';
+  labelJa: '賛成多数' | '慎重・批判的' | '賛否両論' | '中立・客観的';
+  consensusSummary: string;
+  totalAnalyzed: number;
+  model: string;
+}
+
+const sentimentResponseSchema = z.object({
+  sentimentScore: z.number().min(0).max(100),
+  label: z.enum(['Supportive', 'Critical', 'Mixed', 'Neutral']),
+  consensusSummary: z.string(),
+});
+
+/**
+ * Analyzes reader comment sentiment with Gemini 2.5 Flash
+ */
+export async function analyzeDiscussionSentiment(params: {
+  articleTitle: string;
+  comments: { content: string; likesCount: number }[];
+  lang?: 'ja' | 'en';
+}): Promise<DiscussionSentimentResult> {
+  const lang = params.lang || 'ja';
+  const totalAnalyzed = params.comments.length;
+
+  if (totalAnalyzed === 0) {
+    return {
+      sentimentScore: 50,
+      label: 'Neutral',
+      labelJa: '中立・客観的',
+      consensusSummary:
+        lang === 'ja'
+          ? 'まだコメントがありません。最初の意見を投稿して議論を深めましょう。'
+          : 'No comments yet. Be the first to share your perspective!',
+      totalAnalyzed: 0,
+      model: 'heuristic',
+    };
+  }
+
+  const commentTexts = params.comments
+    .slice(0, 10)
+    .map((c, i) => `${i + 1}. [Likes: ${c.likesCount}] ${c.content}`)
+    .join('\n');
+
+  if (aiClient && env.GEMINI_API_KEY) {
+    try {
+      const prompt = `You are a Community Sentiment AI for Yahoo Pulse (Yahoo! JAPAN style comment analyzer).
+Analyze the reader comments below for the article: "${params.articleTitle}".
+Evaluate:
+1. sentimentScore: 0 to 100, where 100 is fully supportive/positive, 0 is heavily critical, and 50 is balanced/neutral.
+2. label: Exactly one of "Supportive", "Critical", "Mixed", "Neutral".
+3. consensusSummary: A balanced 1-2 sentence overview of community consensus in ${lang === 'ja' ? 'Japanese (日本語)' : 'English'}.
+
+Reader Comments:
+${commentTexts}
+
+Return ONLY valid JSON matching this schema:
+{
+  "sentimentScore": number,
+  "label": "Supportive" | "Critical" | "Mixed" | "Neutral",
+  "consensusSummary": string
+}`;
+
+      const response = await aiClient.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          temperature: 0.2,
+        },
+      });
+
+      const responseText = response.text?.trim();
+      if (responseText) {
+        const parsed = JSON.parse(responseText);
+        const validated = sentimentResponseSchema.safeParse(parsed);
+        if (validated.success) {
+          const val = validated.data;
+          const labelJaMap: Record<string, DiscussionSentimentResult['labelJa']> = {
+            Supportive: '賛成多数',
+            Critical: '慎重・批判的',
+            Mixed: '賛否両論',
+            Neutral: '中立・客観的',
+          };
+          return {
+            sentimentScore: val.sentimentScore,
+            label: val.label,
+            labelJa: labelJaMap[val.label] || '中立・客観的',
+            consensusSummary: val.consensusSummary,
+            totalAnalyzed,
+            model: 'gemini-2.5-flash',
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('Gemini discussion sentiment failed, using fallback:', err);
+    }
+  }
+
+  // Heuristic sentiment scoring fallback
+  let positiveHits = 0;
+  let negativeHits = 0;
+  const positiveKeywords = ['素晴らしい', '賛成', '期待', '良い', '正解', 'good', 'great', 'agree', 'positive', 'promising'];
+  const negativeKeywords = ['疑問', '反対', '問題', '懸念', '厳しい', 'bad', 'disagree', 'critical', 'concern', 'issue'];
+
+  for (const c of params.comments) {
+    const text = c.content.toLowerCase();
+    for (const kw of positiveKeywords) if (text.includes(kw)) positiveHits++;
+    for (const kw of negativeKeywords) if (text.includes(kw)) negativeHits++;
+  }
+
+  let score = 50;
+  let label: DiscussionSentimentResult['label'] = 'Neutral';
+  let labelJa: DiscussionSentimentResult['labelJa'] = '中立・客観的';
+
+  if (positiveHits > negativeHits) {
+    score = Math.min(85, 60 + positiveHits * 5);
+    label = 'Supportive';
+    labelJa = '賛成多数';
+  } else if (negativeHits > positiveHits) {
+    score = Math.max(25, 40 - negativeHits * 5);
+    label = 'Critical';
+    labelJa = '慎重・批判的';
+  } else if (positiveHits > 0 && negativeHits > 0) {
+    label = 'Mixed';
+    labelJa = '賛否両論';
+  }
+
+  const consensusSummary =
+    lang === 'ja'
+      ? `ユーザーの間では実効性や今後の展開について${labelJa}の活発な議論が交わされています。`
+      : `Readers are actively debating this story with a ${label.toLowerCase()} balance of perspectives.`;
+
+  return {
+    sentimentScore: score,
+    label,
+    labelJa,
+    consensusSummary,
+    totalAnalyzed,
+    model: 'heuristic-analyzer',
+  };
+}

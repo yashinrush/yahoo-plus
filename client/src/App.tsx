@@ -10,6 +10,7 @@ import { WeatherWidget } from './components/WeatherWidget.js';
 import { RightProfileCard } from './components/RightProfileCard.js';
 import { TrendingTopics } from './components/TrendingTopics.js';
 import { AutumnPromoBanner } from './components/AutumnPromoBanner.js';
+import { ArticleCommentsDrawer } from './components/ArticleCommentsDrawer.js';
 import type { Article } from './types/index.js';
 import { Check, Sliders, X, Activity, Zap, ShieldCheck } from 'lucide-react';
 
@@ -32,6 +33,7 @@ const AppContent: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [showPreferencesModal, setShowPreferencesModal] = useState<boolean>(false);
+  const [selectedArticleForDrawer, setSelectedArticleForDrawer] = useState<Article | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<string>('tokyo');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([
     'technology',
@@ -509,16 +511,20 @@ const AppContent: React.FC = () => {
               <HeroSection
                 mainArticle={mainArticle}
                 subArticles={subArticles}
+                onSelectArticle={(art) => setSelectedArticleForDrawer(art)}
               />
 
               {/* Second Section: あなたにおすすめ (Recommended for you) */}
               <RecommendedGrid
                 onToggleBookmark={(id) => handleToggleBookmark(id)}
                 bookmarkedIds={bookmarkedIds}
+                onSelectArticle={(art) => setSelectedArticleForDrawer(art)}
               />
 
               {/* Third Section: 最新ニュース (Latest News) */}
-              <LatestNewsGrid />
+              <LatestNewsGrid
+                onSelectArticle={(art) => setSelectedArticleForDrawer(art)}
+              />
             </div>
           </div>
 
@@ -785,6 +791,13 @@ const AppContent: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Yafu-Kome Comments & Article Reader Drawer with Gemini AI Sentiment */}
+      <ArticleCommentsDrawer
+        article={selectedArticleForDrawer}
+        isOpen={!!selectedArticleForDrawer}
+        onClose={() => setSelectedArticleForDrawer(null)}
+      />
 
       {/* Footer (Clean, elegant Yahoo! JAPAN styling) */}
       <footer className="mt-8 bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">

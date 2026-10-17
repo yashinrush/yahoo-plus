@@ -89,3 +89,27 @@ export type WeatherInfo = {
   humidityPercent: number;
   icon: string;
 };
+
+export interface UserComment {
+  id: string;
+  content: string;
+  likesCount: number;
+  createdAt: string;
+  userId: string;
+  articleId: string;
+  user: {
+    id: string;
+    name: string;
+    avatar?: string | null;
+  };
+}
+
+export interface DiscussionSentiment {
+  sentimentScore: number;
+  label: 'Supportive' | 'Critical' | 'Mixed' | 'Neutral';
+  labelJa: '賛成多数' | '慎重・批判的' | '賛否両論' | '中立・客観的';
+  consensusSummary: string;
+  totalAnalyzed: number;
+  model: string;
+}
+

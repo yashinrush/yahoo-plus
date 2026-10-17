@@ -187,4 +187,80 @@ npm run dev
 | Stage 10 - Perf & Caching | In-memory TTL cache (3,300x speedup), rate limiters (429 verified), Server-Timing & DB ping | `GET /api/health` (7.2ms DB ping, 0.30ms cache hit), client build 393ms | Passed |
 | Quality Pass & Cleanup | Fixed broken images with onError fallbacks, synced categories & tabs, removed unused files | `npm run build` client (654ms) & server (0 errors), DB ping 0.74ms | Passed |
 | Dynamic Grids Upgrade | Made 'Recommended for You' (live multi-factor scoring + carousel pagination) & 'Latest News' (live category sub-filters) fully functional | `GET /api/news/recommended` & `GET /api/news?category=...`, client build 455ms | Passed |
+- [x] **Stage 11 - Deployment (100% COMPLETE)**
+  - [x] Multi-stage Dockerfile, docker-compose, root package.json orchestration, and portfolio README.md
+  - [x] Vercel serverless deployment config (`vercel.json`, root build script)
+- [x] **Stage 12 - Interactive "Yafu-Kome" (ヤフコメ) Comments Drawer & Gemini AI Sentiment Analysis (100% COMPLETE)**
+  - [x] Extended Prisma schema with `Comment` model (`content`, `likesCount`, `createdAt`, `userId`, `articleId`) with cascading relations and performance indexes
+  - [x] Database migration synced to SQLite `dev.db` with `npx prisma db push`
+  - [x] Gemini 2.5 Flash community discussion sentiment analyzer (`analyzeDiscussionSentiment`) returning structured score (0-100), categorization (`Supportive`, `Critical`, `Mixed`, `Neutral`), and consensus summary in Japanese/English with resilient heuristic fallback
+  - [x] Comments REST endpoints in `server/src/routes/comments.routes.ts`:
+    - `GET /api/comments/article/:articleId` (fetch comments with sort by likes/date + AI sentiment analysis)
+    - `POST /api/comments/article/:articleId` (Zod-validated comment creation with automatic article/user resolution)
+    - `POST /api/comments/:commentId/like` (atomic upvote increment for 共感した)
+    - `DELETE /api/comments/:commentId` (comment removal)
+  - [x] Built responsive slide-over drawer component (`ArticleCommentsDrawer.tsx`):
+    - Red `Y! NEWS` header, category pill, reading time estimate, and external source link
+    - Full headline, featured media, and article lead text
+    - Public consensus card with Gemini AI sentiment score bar and consensus bullet points
+    - Comment submission form with character counter, community guidelines notice, and optimistic posting
+    - Sortable comment feed (`おすすめ順` vs `新着順`) with one-click `👍 共感した` upvoting and `注目コメント` (Top Voice) badges
+  - [x] Connected all article entry points (Hero section, Recommended carousel, Latest News cards) to open the reader & discussion drawer
+  - [x] Clean compilation across monorepo: 0 TypeScript errors in both `client/` and `server/`
+
+---
+
+## 5. Key Architecture Learnings & Interview Takeaways
+- **Bilingual React Architecture:** Implementing internationalization (`useLanguage`) without heavy runtime bloat by using typed dictionary mapping and instant React context switching.
+- **Micro-caching & In-memory TTL:** Using a memory-bounded Map cache with 45-60s TTL to achieve a 3,300x latency reduction (1019ms -> 0.30ms) for high-traffic recommendation and news endpoints.
+- **Relational Fallback & LLM Caching:** Caching Gemini 2.5 Flash output directly in the relational database (`AISummary` and `Comment` sentiment) to eliminate redundant LLM API billing and eliminate user wait times.
+- **Deterministic A/B Testing:** Hashing session IDs with Murmur3/DJB2 to assign users deterministically into cohorts without persistent database writes per session.
+
+---
+
+## 6. How to Run Locally
+
+### Start Backend API:
+```bash
+cd server
+npm run dev
+```
+* Runs Express server on `http://localhost:5000` with hot-reloading (`tsx watch`).
+
+### Start Frontend Portal:
+```bash
+cd client
+npm run dev
+```
+* Runs Vite on `http://localhost:5173` (or `http://localhost:5174`).
+* Switch languages at any time using the `JA / EN` toggle button in the header.
+* Click **"ヤフコメ"** or any article card to slide open the interactive Article Reader & Discussion Drawer with Gemini AI Sentiment Analysis.
+* Click **"設定・興味の変更"** in the left sidebar to open the Preferences & Region customization modal.
+* Click **"A/B Test Group X (CTR)"** in the bottom-right footer to inspect active cohort and CTR analytics.
+* Click **"Diagnostics (DB: Xms)"** in the bottom-right footer to inspect real-time database latency and cache metrics.
+
+---
+
+## 7. Verification & Change Log
+| Date | Milestone / Change | Verified Command / Test | Status |
+| :--- | :--- | :--- | :--- |
+| Initial Setup | Initial assessment & folder scaffolding | `node -v`, `npm -v`, `git --version`, directory check | Passed |
+| Stage 1 - Step 2 | Frontend initialized with Vite, React 19, TS, Tailwind v4, Lucide | `npm run build` (tsc -b && vite build in 377ms) | Passed |
+| Stage 1 - Step 3 | Backend initialized with Express, TS, Zod env config | `npm run build` (tsc with strict NodeNext target) | Passed |
+| Stage 1 - Step 4 | Health Check endpoint (`GET /api/health`) | `Invoke-RestMethod http://localhost:5000/api/health` (Uptime, memory, env returned) | Passed |
+| Stage 1 - Step 5 | Connected Frontend to Backend via Vite Proxy | `client` fetches `/api/health`, displays ping latency, uptime & diagnostics | Passed |
+| Stage 2 - Step 1 | Top Header, SearchBar, ServiceNavigation & core types | `npm run build` (tsc -b && vite build in 380ms) | Passed |
+| Stage 2 - Step 2 | Complete 3-Column Portal UI (Sidebar, Tabs, Featured, Headlines, Weather, Trends) | `npm run build` (Clean production bundle in 394ms, 0 type errors) | Passed |
+| Stage 3 - Complete | GNews live integration, in-memory cache, bilingual EN/JA engine, pixel-perfect screenshot UI replica | `npm run build` (Client built in 402ms, live `/api/news?lang=ja` returning GNews payload) | Passed |
+| Stage 4 - Database | Prisma ORM schema synced (`dev.db`), models for User, Article, Bookmark, History, AISummary | `npx prisma db push`, `npx tsx prisma/seed.ts` (Seeded Taro, articles, relations) | Passed |
+| Stage 5 - Auth & Prefs | Authentication, preferences modal, and persistent bookmarks API | `Invoke-RestMethod /api/auth/me` & `/api/user/bookmarks`, client build passed in 892ms | Passed |
+| Stage 6 - Gemini AI | Google GenAI SDK integration with Prisma database caching | `POST /api/news/summarize` returned structured JSON, client build in 442ms | Passed |
+| Stage 7 - Recommendation | Multi-factor deterministic ranking with recency decay, popularity, read-penalty & diversity | `GET /api/news/recommended` returns ranked list with scoring breakdowns, client build 409ms | Passed |
+| Stage 8 - Search & Trending | 300ms debouncing, dynamic trending velocity engine, velocity boosting API | `GET /api/trending?lang=ja` returned top 5 with surging tags, client build 391ms | Passed |
+| Stage 9 - A/B Testing | Deterministic user hashing, telemetry ingestion, CTR analytics API & frontend inspector modal | `GET /api/ab/metrics`, `POST /api/ab/track`, client build 390ms | Passed |
+| Stage 10 - Perf & Caching | In-memory TTL cache (3,300x speedup), rate limiters (429 verified), Server-Timing & DB ping | `GET /api/health` (7.2ms DB ping, 0.30ms cache hit), client build 393ms | Passed |
+| Quality Pass & Cleanup | Fixed broken images with onError fallbacks, synced categories & tabs, removed unused files | `npm run build` client (654ms) & server (0 errors), DB ping 0.74ms | Passed |
+| Dynamic Grids Upgrade | Made 'Recommended for You' (live multi-factor scoring + carousel pagination) & 'Latest News' (live category sub-filters) fully functional | `GET /api/news/recommended` & `GET /api/news?category=...`, client build 455ms | Passed |
 | Stage 11 - Deployment | Multi-stage Dockerfile, docker-compose, root package.json orchestration, and portfolio README.md | `npm run build` (433ms), Docker build files created, README.md published | Passed |
+| Stage 12 - Yafu-Kome & AI Sentiment | Comment Prisma model, comments & like API, Gemini 2.5 Flash sentiment analysis, slide-over reader drawer with real-time upvotes & posting | `npm run build` client (855ms) & server (0 errors), DB schema pushed | Passed |
+

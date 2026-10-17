@@ -99,7 +99,7 @@ export const ArticleCommentsDrawer: React.FC<ArticleCommentsDrawerProps> = ({
             title: article.title,
             description: article.description,
             url: article.url,
-            sourceName: article.source.name,
+            sourceName: article.source?.name || 'Yahoo! ニュース',
             category: article.category,
           },
         }),
@@ -208,7 +208,7 @@ export const ArticleCommentsDrawer: React.FC<ArticleCommentsDrawerProps> = ({
               <div className="flex items-center justify-between text-xs text-slate-500 pb-2 border-b border-slate-100">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-slate-700">
-                    {article.source.name || 'Yahoo! ニュース'}
+                    {article.source?.name || 'Yahoo! ニュース'}
                   </span>
                   <span>•</span>
                   <span>{lang === 'ja' ? '読了目安 約2分' : '2 min read'}</span>
@@ -362,10 +362,16 @@ export const ArticleCommentsDrawer: React.FC<ArticleCommentsDrawerProps> = ({
                   <textarea
                     value={newCommentText}
                     onChange={(e) => setNewCommentText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSubmitComment(e);
+                      }
+                    }}
                     placeholder={
                       lang === 'ja'
-                        ? 'この記事に対する意見や考えを入力してください（誹謗中傷はお控えください）'
-                        : 'Share your respectful thoughts on this story...'
+                        ? 'この記事に対する意見や考えを入力してください（誹謗中傷はお控えください / Ctrl+Enterで投稿）'
+                        : 'Share your respectful thoughts on this story (Ctrl+Enter to post)...'
                     }
                     rows={3}
                     maxLength={1000}

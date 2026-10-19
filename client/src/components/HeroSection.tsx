@@ -61,11 +61,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   };
 
   return (
-    <div className="bg-white p-3.5 border-b border-slate-200">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+    <div className="bg-white p-3 sm:p-3.5 border-b border-slate-200">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-3.5">
         {/* Left Side: Big Featured Photo Card */}
         <div className="lg:col-span-7 flex flex-col justify-between">
-          <div className="relative rounded-lg overflow-hidden h-[260px] sm:h-[300px] group bg-slate-900">
+          <div className="relative rounded-lg overflow-hidden h-[220px] sm:h-[300px] group bg-slate-900">
             <img
               src={mainArticle.image || 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=1200&q=80'}
               alt={mainArticle.title}
@@ -79,17 +79,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20 pointer-events-none" />
 
             {/* Top-left "主要ニュース" Badge */}
-            <div className="absolute top-3 left-3">
-              <span className="bg-black/60 backdrop-blur-xs text-white text-[11px] font-bold px-2 py-0.5 rounded">
+            <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3">
+              <span className="bg-black/60 backdrop-blur-xs text-white text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded">
                 {t('mainNewsBadge')}
               </span>
             </div>
 
             {/* Bottom Content Overlay */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 text-white space-y-2">
+            <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 text-white space-y-1.5 sm:space-y-2">
               <h2
                 onClick={() => onSelectArticle && onSelectArticle(mainArticle)}
-                className="text-base sm:text-lg font-bold leading-snug line-clamp-2 hover:underline cursor-pointer"
+                className="text-sm sm:text-base md:text-lg font-bold leading-snug line-clamp-2 hover:underline cursor-pointer"
               >
                 {mainArticle.title}
               </h2>
@@ -197,7 +197,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               onClick={() => onSelectArticle && onSelectArticle(sub)}
               className="py-2.5 first:pt-0 last:pb-0 flex items-center gap-3 group cursor-pointer"
             >
-              <div className="w-24 h-16 rounded overflow-hidden shrink-0 bg-slate-100 border border-slate-200/80">
+              <div className="w-20 h-14 sm:w-24 sm:h-16 rounded overflow-hidden shrink-0 bg-slate-100 border border-slate-200/80">
                 <img
                   src={sub.image || 'https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=400&q=80'}
                   alt={sub.title}

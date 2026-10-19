@@ -305,7 +305,7 @@ export const LatestNewsGrid: React.FC<LatestNewsGridProps> = ({ onSelectArticle 
   }, [lang, activeSubFilter]);
 
   return (
-    <div className="bg-white p-3.5">
+    <div className="bg-white p-3 sm:p-3.5">
       {/* Header with Sub Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 gap-2">
         <div className="flex items-center gap-2">
@@ -315,14 +315,14 @@ export const LatestNewsGrid: React.FC<LatestNewsGridProps> = ({ onSelectArticle 
           {isLoading && <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" />}
         </div>
 
-        <div className="flex items-center gap-2.5 text-xs">
+        <div className="flex items-center gap-2 sm:gap-2.5 text-xs overflow-x-auto whitespace-nowrap scrollbar-none py-0.5">
           {filterOptions.map((opt) => {
             const isActive = activeSubFilter === opt.id;
             return (
               <button
                 key={opt.id}
                 onClick={() => setActiveSubFilter(opt.id)}
-                className={`transition-colors cursor-pointer ${
+                className={`transition-colors cursor-pointer shrink-0 ${
                   isActive
                     ? 'text-blue-600 font-bold underline underline-offset-4'
                     : 'text-slate-500 hover:text-slate-800 font-normal'
@@ -336,7 +336,7 @@ export const LatestNewsGrid: React.FC<LatestNewsGridProps> = ({ onSelectArticle 
       </div>
 
       {/* 4 Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
         {items.map((item) => (
           <div
             key={item.id}
@@ -360,7 +360,7 @@ export const LatestNewsGrid: React.FC<LatestNewsGridProps> = ({ onSelectArticle 
             }}
           >
             <div>
-              <div className="rounded-md overflow-hidden h-24 bg-slate-100 border border-slate-200/80 mb-2">
+              <div className="rounded-md overflow-hidden h-20 sm:h-24 bg-slate-100 border border-slate-200/80 mb-2">
                 <img
                   src={item.image}
                   alt={item.title}

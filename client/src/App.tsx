@@ -40,6 +40,36 @@ const AppContent: React.FC = () => {
     'economy',
     'sports',
   ]);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+
+  // Helper to handle category selection & tab sync
+  const handleSelectCategory = (cat: string) => {
+    if (cat === 'region-change') {
+      setShowPreferencesModal(true);
+    } else if (['tokyo', 'osaka', 'nagoya', 'fukuoka'].includes(cat)) {
+      setSelectedRegion(cat);
+      setSearchQuery(cat);
+      setActiveCategory(cat);
+    } else {
+      setActiveCategory(cat);
+      // Sync activeTab
+      const tabMapping: Record<string, string> = {
+        home: 'top',
+        news: 'top',
+        sports: 'sports',
+        economy: 'economy',
+        business: 'economy',
+        technology: 'technology',
+        world: 'world',
+        entertainment: 'entertainment',
+        society: 'society',
+        local: 'local',
+      };
+      if (tabMapping[cat]) {
+        setActiveTab(tabMapping[cat]);
+      }
+    }
+  };
 
   // 1. Load User Profile and Bookmarks from Database
   const loadUserData = useCallback(async () => {
@@ -417,10 +447,65 @@ const AppContent: React.FC = () => {
           setActiveCategory('bookmarks');
           setActiveTab('top');
         }}
+        onToggleMobileMenu={() => setIsMobileMenuOpen(true)}
       />
 
-      {/* 2. Three-Column Desktop Grid Container (Exact Yahoo! JAPAN Portal density) */}
-      <main className="flex-1 max-w-[1240px] w-full mx-auto px-4 py-3">
+      {/* Mobile Category Slide-over Drawer */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden overflow-hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+
+          {/* Drawer Panel */}
+          <div className="fixed inset-y-0 left-0 max-w-full flex">
+            <div className="w-72 max-w-[85vw] bg-white shadow-2xl flex flex-col border-r border-slate-200">
+              <div className="px-4 py-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+                <div className="flex items-center gap-2">
+                  <span className="text-[#e60012] font-serif font-black text-xl">YAHOO!</span>
+                  <span className="text-xs font-bold text-slate-700">{lang === 'ja' ? 'カテゴリー' : 'Categories'}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200 cursor-pointer"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-3.5 space-y-4">
+                <CategorySidebar
+                  activeCategory={activeCategory}
+                  onSelectCategory={(cat) => {
+                    handleSelectCategory(cat);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  bookmarkCount={bookmarkedIds.size}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    setShowPreferencesModal(true);
+                  }}
+                  className="w-full py-2 px-3 bg-white border border-slate-200 rounded text-xs font-semibold text-slate-600 hover:text-blue-600 hover:bg-slate-50 flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                >
+                  <Sliders className="w-3.5 h-3.5 text-blue-600" />
+                  <span>{lang === 'ja' ? '設定・興味の変更' : 'Preferences'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Responsive 3-Column Desktop / 2-Column Tablet / 1-Column Mobile Layout */}
+      <main className="flex-1 max-w-[1240px] w-full mx-auto px-3 sm:px-4 py-3">
         {/* Search feedback notice if active */}
         {searchQuery && (
           <div className="mb-3 bg-blue-50 border border-blue-200 text-blue-900 px-3.5 py-1.5 rounded text-xs flex items-center justify-between">
@@ -437,37 +522,11 @@ const AppContent: React.FC = () => {
         )}
 
         <div className="flex flex-col md:flex-row gap-3 items-start">
-          {/* COLUMN 1: Left Navigation Sidebar (Authentic Japanese portal categories) */}
-          <div className="w-full md:w-[170px] shrink-0 space-y-3">
+          {/* COLUMN 1: Left Navigation Sidebar (Visible on Desktop >= 1024px) */}
+          <div className="hidden lg:block lg:w-[170px] shrink-0 space-y-3">
             <CategorySidebar
               activeCategory={activeCategory}
-              onSelectCategory={(cat) => {
-                if (cat === 'region-change') {
-                  setShowPreferencesModal(true);
-                } else if (['tokyo', 'osaka', 'nagoya', 'fukuoka'].includes(cat)) {
-                  setSelectedRegion(cat);
-                  setSearchQuery(cat);
-                  setActiveCategory(cat);
-                } else {
-                  setActiveCategory(cat);
-                  // Sync activeTab
-                  const tabMapping: Record<string, string> = {
-                    home: 'top',
-                    news: 'top',
-                    sports: 'sports',
-                    economy: 'economy',
-                    business: 'economy',
-                    technology: 'technology',
-                    world: 'world',
-                    entertainment: 'entertainment',
-                    society: 'society',
-                    local: 'local',
-                  };
-                  if (tabMapping[cat]) {
-                    setActiveTab(tabMapping[cat]);
-                  }
-                }
-              }}
+              onSelectCategory={handleSelectCategory}
               bookmarkCount={bookmarkedIds.size}
             />
 
@@ -481,8 +540,8 @@ const AppContent: React.FC = () => {
             </button>
           </div>
 
-          {/* COLUMN 2: Center Main Content (Tabs, Hero Split View, Recommended, Latest) */}
-          <div className="flex-1 min-w-0 space-y-3">
+          {/* COLUMN 2: Center Main Content (Prioritized on Mobile & Tablet!) */}
+          <div className="w-full flex-1 min-w-0 space-y-3 order-1 md:order-1 lg:order-2">
             <div className="bg-white border border-slate-200 rounded-lg shadow-2xs overflow-hidden relative">
               {isLoading && (
                 <div className="absolute top-0 left-0 right-0 h-0.5 bg-blue-600 animate-pulse z-20" />
@@ -529,7 +588,7 @@ const AppContent: React.FC = () => {
           </div>
 
           {/* COLUMN 3: Right Sidebar (Weather, Taro Card with 4 circular shortcuts, Trends, Banner) */}
-          <div className="w-full md:w-[275px] shrink-0 space-y-3">
+          <div className="w-full md:w-[260px] lg:w-[275px] shrink-0 space-y-3 order-2 md:order-2 lg:order-3">
             {/* Weather Widget (Tokyo / 2-day forecast) */}
             <WeatherWidget />
 
@@ -549,8 +608,8 @@ const AppContent: React.FC = () => {
 
       {/* Preferences Modal */}
       {showPreferencesModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-5 space-y-4 text-xs animate-fadeIn">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto p-4 sm:p-5 space-y-4 text-xs animate-fadeIn">
             <div className="flex items-center justify-between pb-2 border-b border-slate-200">
               <h3 className="font-bold text-sm text-slate-800 flex items-center gap-1.5">
                 <Sliders className="w-4 h-4 text-blue-600" />
@@ -640,8 +699,8 @@ const AppContent: React.FC = () => {
 
       {/* Unified Engineering Inspector Modal (A/B Testing & System Health Observability) */}
       {showInspectorModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-5 space-y-4 border border-slate-200 text-xs animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-xs p-3 sm:p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-4 sm:p-5 space-y-4 border border-slate-200 text-xs animate-fadeIn">
             <div className="flex items-center justify-between pb-2 border-b border-slate-200">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-blue-600" />

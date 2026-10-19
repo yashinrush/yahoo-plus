@@ -133,7 +133,7 @@ export const RecommendedGrid: React.FC<RecommendedGridProps> = ({
   };
 
   return (
-    <div className="bg-white p-3.5 border-b border-slate-200 relative">
+    <div className="bg-white p-3 sm:p-3.5 border-b border-slate-200 relative">
       <div className="flex items-center justify-between pb-3">
         <div className="flex items-center gap-2">
           <h3 className="font-bold text-sm text-slate-900">
@@ -161,7 +161,7 @@ export const RecommendedGrid: React.FC<RecommendedGridProps> = ({
 
       <div className="relative group/carousel">
         {/* 4 Cards Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 transition-opacity duration-200">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 transition-opacity duration-200">
           {currentItems.map((item) => {
             const isBookmarked = bookmarkedIds.has(item.id) || bookmarkedIds.has(item.url);
 
@@ -187,7 +187,7 @@ export const RecommendedGrid: React.FC<RecommendedGridProps> = ({
                 }}
               >
                 <div>
-                  <div className="rounded-md overflow-hidden h-24 bg-slate-100 border border-slate-200/80 mb-2">
+                  <div className="rounded-md overflow-hidden h-20 sm:h-24 bg-slate-100 border border-slate-200/80 mb-2">
                     <img
                       src={item.image}
                       alt={item.title}

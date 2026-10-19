@@ -25,8 +25,8 @@ export const NewsCategoryTabs: React.FC<NewsCategoryTabsProps> = ({
   ];
 
   return (
-    <div className="flex items-center justify-between border-b border-slate-200 bg-white px-2 pt-1">
-      <div className="flex items-center gap-1 sm:gap-4 overflow-x-auto scrollbar-none">
+    <div className="flex items-center justify-between border-b border-slate-200 bg-white px-2 sm:px-3 pt-1">
+      <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto scrollbar-none touch-pan-x pr-2">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (

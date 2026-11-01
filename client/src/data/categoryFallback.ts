@@ -416,3 +416,4 @@ export function getClientCategoryFallback(category: string, lang: 'ja' | 'en'): 
   ];
   return mix.slice(0, 8);
 }
+

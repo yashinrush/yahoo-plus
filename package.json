@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "AI-Powered Personalized News Platform inspired by Yahoo! JAPAN",
   "private": true,
-  "type": "module",
   "workspaces": [
     "client",
     "server"
@@ -14,6 +13,7 @@
     "build:server": "npm --prefix server run build",
     "build:client": "npm --prefix client run build",
     "build": "npm run build:server && npm run build:client && node -e \"import('fs').then(fs => fs.cpSync('client/dist', 'dist', {recursive: true}))\"",
+    "vercel-build": "prisma generate --schema=server/prisma/schema.prisma && npm run build",
     "start": "node server/dist/server.js",
     "prisma:seed": "npm --prefix server run prisma:seed"
   },
@@ -28,5 +28,8 @@
     "line-yahoo"
   ],
   "author": "Yahoo Pulse Team",
-  "license": "MIT"
+  "license": "MIT",
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "*"
+  }
 }

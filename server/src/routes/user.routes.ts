@@ -178,3 +178,51 @@ userRouter.get('/history', async (req: AuthRequest, res: Response) => {
     res.status(500).json({ status: 'error', message: 'Failed to fetch reading history' });
   }
 });
+
+/**
+ * POST /api/user/history
+ * Records an article read into user history
+ */
+userRouter.post('/history', async (req: AuthRequest, res: Response) => {
+  try {
+    const { articleId, title, url, description, category, imageUrl, sourceName } = req.body;
+    let resolvedId = articleId;
+
+    if (!resolvedId && url) {
+      let article = await prisma.article.findUnique({ where: { url } });
+      if (!article) {
+        article = await prisma.article.create({
+          data: {
+            title: title || 'News Story',
+            description: description || '',
+            url,
+            imageUrl,
+            sourceName: sourceName || 'Yahoo! Pulse',
+            category: category || 'general',
+            publishedAt: 'recently',
+          },
+        });
+      }
+      resolvedId = article.id;
+    }
+
+    if (!resolvedId) {
+      return res.status(400).json({ status: 'error', message: 'articleId or url is required' });
+    }
+
+    // Upsert reading history entry
+    const entry = await prisma.readingHistory.create({
+      data: {
+        userId: req.userId!,
+        articleId: resolvedId,
+      },
+      include: { article: true },
+    });
+
+    res.status(201).json({ status: 'ok', history: entry });
+  } catch (err) {
+    console.error('Record reading history error:', err);
+    res.status(500).json({ status: 'error', message: 'Failed to record reading history' });
+  }
+});
+

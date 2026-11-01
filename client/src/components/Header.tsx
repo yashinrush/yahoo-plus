@@ -8,6 +8,7 @@ interface HeaderProps {
   bookmarkCount: number;
   onBookmarkClick?: () => void;
   onToggleMobileMenu?: () => void;
+  searchQuery?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -15,6 +16,7 @@ export const Header: React.FC<HeaderProps> = ({
   bookmarkCount,
   onBookmarkClick,
   onToggleMobileMenu,
+  searchQuery = '',
 }) => {
   const { lang, toggleLang, t } = useLanguage();
 
@@ -49,7 +51,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Center Search Bar (Visible on >= sm, 640px+) */}
           <div className="hidden sm:block flex-1 max-w-[580px] mx-2">
-            <SearchBar onSearch={onSearch} placeholder={t('searchPlaceholder')} />
+            <SearchBar onSearch={onSearch} placeholder={t('searchPlaceholder')} initialQuery={searchQuery} />
           </div>
 
           {/* Right Action Icons & User Profile */}
@@ -115,7 +117,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Mobile Dedicated Search Bar (Visible only on < sm, 640px) */}
         <div className="sm:hidden pt-2">
-          <SearchBar onSearch={onSearch} placeholder={t('searchPlaceholder')} />
+          <SearchBar onSearch={onSearch} placeholder={t('searchPlaceholder')} initialQuery={searchQuery} />
         </div>
       </div>
     </header>

@@ -23,6 +23,23 @@ if (env.GEMINI_API_KEY) {
   }
 }
 
+const GEMINI_MODELS = [
+  'gemini-flash-lite-latest',
+  'gemini-3.6-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-3-flash-preview',
+  'gemini-3.5-flash',
+  'gemini-3.8-flash'
+];
+
+function cleanJsonString(str: string): string {
+  let s = str.trim();
+  if (s.startsWith('```')) {
+    s = s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  }
+  return s;
+}
+
 /**
  * Summarize an article with Gemini 2.5 Flash and persist to Prisma database
  */
@@ -57,10 +74,9 @@ export async function summarizeArticle(params: {
     }
   }
 
-  // 2. Query Gemini API
+  // 2. Query Gemini API with multi-model cascade
   if (aiClient && env.GEMINI_API_KEY) {
-    try {
-      const prompt = `You are a Senior Editorial News Analyst for Yahoo Pulse (inspired by Yahoo! JAPAN).
+    const prompt = `You are a Senior Editorial News Analyst for Yahoo Pulse (inspired by Yahoo! JAPAN).
 Analyze this news story and provide a concise executive summary and key takeaways.
 Return ONLY valid JSON with this exact structure:
 {
@@ -75,67 +91,70 @@ Return ONLY valid JSON with this exact structure:
 Article Title: "${params.title}"
 Article Context: "${params.description}"`;
 
-      const response = await aiClient.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          temperature: 0.2,
-        },
-      });
+    for (const modelName of GEMINI_MODELS) {
+      try {
+        const response = await aiClient.models.generateContent({
+          model: modelName,
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+            temperature: 0.2,
+          },
+        });
 
-      const responseText = response.text?.trim();
-      if (responseText) {
-        const parsedJson = JSON.parse(responseText);
-        const validated = summaryResponseSchema.safeParse(parsedJson);
+        const rawText = response.text?.trim();
+        if (rawText) {
+          const parsedJson = JSON.parse(cleanJsonString(rawText));
+          const validated = summaryResponseSchema.safeParse(parsedJson);
 
-        if (validated.success) {
-          const result = validated.data;
+          if (validated.success) {
+            const result = validated.data;
 
-          // If we have an articleId, persist it to the database
-          if (params.articleId) {
-            try {
-              // Ensure article exists in DB first
-              let article = await prisma.article.findUnique({ where: { id: params.articleId } });
-              if (!article && params.url) {
-                article = await prisma.article.create({
-                  data: {
-                    id: params.articleId,
-                    title: params.title,
-                    description: params.description,
-                    url: params.url,
-                    sourceName: 'Yahoo! Pulse News',
-                    category: 'news',
-                    publishedAt: 'recently',
-                  },
-                });
+            // If we have an articleId, persist it to the database
+            if (params.articleId) {
+              try {
+                // Ensure article exists in DB first
+                let article = await prisma.article.findUnique({ where: { id: params.articleId } });
+                if (!article && params.url) {
+                  article = await prisma.article.create({
+                    data: {
+                      id: params.articleId,
+                      title: params.title,
+                      description: params.description,
+                      url: params.url,
+                      sourceName: 'Yahoo! Pulse News',
+                      category: 'news',
+                      publishedAt: 'recently',
+                    },
+                  });
+                }
+
+                if (article) {
+                  await prisma.aISummary.create({
+                    data: {
+                      articleId: article.id,
+                      summary: result.summary,
+                      keyPoints: JSON.stringify(result.keyPoints),
+                      model: modelName,
+                    },
+                  });
+                }
+              } catch (dbErr) {
+                console.warn('Could not cache summary in DB:', dbErr);
               }
-
-              if (article) {
-                await prisma.aISummary.create({
-                  data: {
-                    articleId: article.id,
-                    summary: result.summary,
-                    keyPoints: JSON.stringify(result.keyPoints),
-                    model: 'gemini-2.5-flash',
-                  },
-                });
-              }
-            } catch (dbErr) {
-              console.warn('Could not cache summary in DB:', dbErr);
             }
-          }
 
-          return {
-            summary: result.summary,
-            keyPoints: result.keyPoints,
-            cached: false,
-            model: 'gemini-2.5-flash',
-          };
+            return {
+              summary: result.summary,
+              keyPoints: result.keyPoints,
+              cached: false,
+              model: modelName,
+            };
+          }
         }
+      } catch (apiErr: any) {
+        console.warn(`Gemini model ${modelName} failed (${apiErr.status || apiErr.message || 'error'}), attempting next fallback model...`);
       }
-    } catch (apiErr) {
-      console.warn('Gemini API call failed, using intelligent editorial synthesis:', apiErr);
     }
   }
 
@@ -236,8 +255,7 @@ export async function analyzeDiscussionSentiment(params: {
     .join('\n');
 
   if (aiClient && env.GEMINI_API_KEY) {
-    try {
-      const prompt = `You are a Community Sentiment AI for Yahoo Pulse (Yahoo! JAPAN style comment analyzer).
+    const prompt = `You are a Community Sentiment AI for Yahoo Pulse (Yahoo! JAPAN style comment analyzer).
 Analyze the reader comments below for the article: "${params.articleTitle}".
 Evaluate:
 1. sentimentScore: 0 to 100, where 100 is fully supportive/positive, 0 is heavily critical, and 50 is balanced/neutral.
@@ -254,39 +272,42 @@ Return ONLY valid JSON matching this schema:
   "consensusSummary": string
 }`;
 
-      const response = await aiClient.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          temperature: 0.2,
-        },
-      });
+    for (const modelName of GEMINI_MODELS) {
+      try {
+        const response = await aiClient.models.generateContent({
+          model: modelName,
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+            temperature: 0.2,
+          },
+        });
 
-      const responseText = response.text?.trim();
-      if (responseText) {
-        const parsed = JSON.parse(responseText);
-        const validated = sentimentResponseSchema.safeParse(parsed);
-        if (validated.success) {
-          const val = validated.data;
-          const labelJaMap: Record<string, DiscussionSentimentResult['labelJa']> = {
-            Supportive: '賛成多数',
-            Critical: '慎重・批判的',
-            Mixed: '賛否両論',
-            Neutral: '中立・客観的',
-          };
-          return {
-            sentimentScore: val.sentimentScore,
-            label: val.label,
-            labelJa: labelJaMap[val.label] || '中立・客観的',
-            consensusSummary: val.consensusSummary,
-            totalAnalyzed,
-            model: 'gemini-2.5-flash',
-          };
+        const rawText = response.text?.trim();
+        if (rawText) {
+          const parsed = JSON.parse(cleanJsonString(rawText));
+          const validated = sentimentResponseSchema.safeParse(parsed);
+          if (validated.success) {
+            const val = validated.data;
+            const labelJaMap: Record<string, DiscussionSentimentResult['labelJa']> = {
+              Supportive: '賛成多数',
+              Critical: '慎重・批判的',
+              Mixed: '賛否両論',
+              Neutral: '中立・客観的',
+            };
+            return {
+              sentimentScore: val.sentimentScore,
+              label: val.label,
+              labelJa: labelJaMap[val.label] || '中立・客観的',
+              consensusSummary: val.consensusSummary,
+              totalAnalyzed,
+              model: modelName,
+            };
+          }
         }
+      } catch (err: any) {
+        console.warn(`Gemini sentiment analysis on ${modelName} failed, attempting next model...`);
       }
-    } catch (err) {
-      console.warn('Gemini discussion sentiment failed, using fallback:', err);
     }
   }
 

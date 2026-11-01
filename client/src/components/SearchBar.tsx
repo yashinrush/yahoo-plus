@@ -14,6 +14,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 }) => {
   const [query, setQuery] = useState(initialQuery);
 
+  // Keep input in sync if parent changes initialQuery (e.g. from trending topics or clear)
+  useEffect(() => {
+    setQuery(initialQuery);
+  }, [initialQuery]);
+
   // Debounced search trigger (300ms)
   useEffect(() => {
     const timer = setTimeout(() => {

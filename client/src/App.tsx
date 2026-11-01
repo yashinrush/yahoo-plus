@@ -12,7 +12,7 @@ import { TrendingTopics } from './components/TrendingTopics.js';
 import { AutumnPromoBanner } from './components/AutumnPromoBanner.js';
 import { ArticleCommentsDrawer } from './components/ArticleCommentsDrawer.js';
 import type { Article } from './types/index.js';
-import { Check, Sliders, X, Activity, Zap, ShieldCheck } from 'lucide-react';
+import { Check, Sliders, X, Activity, Zap, ShieldCheck, Bookmark, Clock } from 'lucide-react';
 
 interface UserProfile {
   id: string;
@@ -48,10 +48,12 @@ const AppContent: React.FC = () => {
       setShowPreferencesModal(true);
     } else if (['tokyo', 'osaka', 'nagoya', 'fukuoka'].includes(cat)) {
       setSelectedRegion(cat);
-      setSearchQuery(cat);
+      setSearchQuery('');
       setActiveCategory(cat);
+      setActiveTab('local');
     } else {
       setActiveCategory(cat);
+      setSearchQuery('');
       // Sync activeTab
       const tabMapping: Record<string, string> = {
         home: 'top',
@@ -198,9 +200,7 @@ const AppContent: React.FC = () => {
       const res = await fetch(`${endpoint}?${params.toString()}`);
       if (res.ok) {
         const json = (await res.json()) as { articles: Article[] };
-        if (json.articles && json.articles.length > 0) {
-          setArticles(json.articles);
-        }
+        setArticles(json.articles || []);
       }
     } catch (err) {
       console.warn('Could not load live news from backend, fallback active:', err);
@@ -212,6 +212,24 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     loadNews();
   }, [loadNews]);
+
+  // Record article view to reading history and open drawer
+  const handleOpenArticleDrawer = (art: Article) => {
+    setSelectedArticleForDrawer(art);
+    fetch('/api/user/history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        articleId: art.id,
+        title: art.title,
+        description: art.description,
+        url: art.url,
+        category: art.category,
+        imageUrl: art.image,
+        sourceName: art.source?.name,
+      }),
+    }).catch(() => {});
+  };
 
   // 3. Persist Bookmark Toggle to Database
   const handleToggleBookmark = async (id: string, articleData?: Partial<Article>) => {
@@ -443,6 +461,7 @@ const AppContent: React.FC = () => {
       <Header
         onSearch={handleSearch}
         bookmarkCount={bookmarkedIds.size}
+        searchQuery={searchQuery}
         onBookmarkClick={() => {
           setActiveCategory('bookmarks');
           setActiveTab('top');
@@ -566,31 +585,62 @@ const AppContent: React.FC = () => {
                 }}
               />
 
-              {/* Top Hero Section (Split View: Big Photo on left, 4 rows on right) */}
-              <HeroSection
-                mainArticle={mainArticle}
-                subArticles={subArticles}
-                onSelectArticle={(art) => setSelectedArticleForDrawer(art)}
-              />
+              {activeCategory === 'bookmarks' && articles.length === 0 ? (
+                <div className="p-8 text-center space-y-2">
+                  <Bookmark className="w-10 h-10 text-slate-300 mx-auto" />
+                  <p className="text-sm font-bold text-slate-700">
+                    {lang === 'ja' ? '保存された記事はありません' : 'No Bookmarked Articles Yet'}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {lang === 'ja'
+                      ? '記事のブックマークアイコンをクリックして後で読む記事を保存できます。'
+                      : 'Click the bookmark icon on any article to save it for later.'}
+                  </p>
+                </div>
+              ) : activeCategory === 'history' && articles.length === 0 ? (
+                <div className="p-8 text-center space-y-2">
+                  <Clock className="w-10 h-10 text-slate-300 mx-auto" />
+                  <p className="text-sm font-bold text-slate-700">
+                    {lang === 'ja' ? '閲覧履歴はありません' : 'No Reading History Yet'}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {lang === 'ja'
+                      ? 'ニュースをクリックして詳細を読むと、ここに閲覧履歴が蓄積されます。'
+                      : 'Articles you read will automatically appear here in your reading history.'}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Top Hero Section (Split View: Big Photo on left, 4 rows on right) */}
+                  <HeroSection
+                    mainArticle={mainArticle}
+                    subArticles={subArticles}
+                    onSelectArticle={handleOpenArticleDrawer}
+                  />
 
-              {/* Second Section: あなたにおすすめ (Recommended for you) */}
-              <RecommendedGrid
-                onToggleBookmark={(id) => handleToggleBookmark(id)}
-                bookmarkedIds={bookmarkedIds}
-                onSelectArticle={(art) => setSelectedArticleForDrawer(art)}
-              />
+                  {/* Second Section: あなたにおすすめ (Recommended for you) */}
+                  <RecommendedGrid
+                    onToggleBookmark={(id) => handleToggleBookmark(id)}
+                    bookmarkedIds={bookmarkedIds}
+                    onSelectArticle={handleOpenArticleDrawer}
+                  />
 
-              {/* Third Section: 最新ニュース (Latest News) */}
-              <LatestNewsGrid
-                onSelectArticle={(art) => setSelectedArticleForDrawer(art)}
-              />
+                  {/* Third Section: 最新ニュース (Latest News) */}
+                  <LatestNewsGrid
+                    onSelectArticle={handleOpenArticleDrawer}
+                  />
+                </>
+              )}
             </div>
           </div>
 
           {/* COLUMN 3: Right Sidebar (Weather, Taro Card with 4 circular shortcuts, Trends, Banner) */}
           <div className="w-full md:w-[260px] lg:w-[275px] shrink-0 space-y-3 order-2 md:order-2 lg:order-3">
-            {/* Weather Widget (Tokyo / 2-day forecast) */}
-            <WeatherWidget />
+            {/* Weather Widget (Adaptive for Tokyo, Osaka, Nagoya, Fukuoka) */}
+            <WeatherWidget
+              region={selectedRegion}
+              onOpenPreferences={() => setShowPreferencesModal(true)}
+            />
 
             {/* Taro-san Profile & Services Card (Mail, PayPay, Points, Favorites) */}
             <RightProfileCard />

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ThumbsUp, MessageSquare, Sparkles, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import type { Article } from '../types/index.js';
 import { useLanguage } from '../context/LanguageContext.js';
@@ -25,6 +25,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   const [showAiSummary, setShowAiSummary] = useState(false);
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
+
+  // Reset AI summary state whenever the main article changes
+  useEffect(() => {
+    setSummaryData(null);
+    setShowAiSummary(false);
+    setIsSummarizing(false);
+  }, [mainArticle.id, mainArticle.title]);
 
   const handleToggleSummary = async () => {
     if (!showAiSummary) {

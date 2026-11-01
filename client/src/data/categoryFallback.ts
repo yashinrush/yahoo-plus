@@ -417,3 +417,31 @@ export function getClientCategoryFallback(category: string, lang: 'ja' | 'en'): 
   return mix.slice(0, 8);
 }
 
+export function searchArticles(query: string, lang: 'ja' | 'en'): Article[] {
+  const langData = CLIENT_CATEGORY_ARTICLES[lang] || CLIENT_CATEGORY_ARTICLES.ja;
+  const allArticles: Article[] = [];
+  const seenIds = new Set<string>();
+
+  for (const list of Object.values(langData)) {
+    for (const art of list) {
+      if (!seenIds.has(art.id)) {
+        seenIds.add(art.id);
+        allArticles.push(art);
+      }
+    }
+  }
+
+  const clean = query.trim().toLowerCase();
+  if (!clean) return allArticles.slice(0, 8);
+
+  // Split into search terms (e.g. "大谷" "50号")
+  const terms = clean.split(/\s+/).filter(Boolean);
+
+  const results = allArticles.filter((art) => {
+    const haystack = `${art.title} ${art.description} ${art.category} ${art.source?.name || ''}`.toLowerCase();
+    return terms.some((term) => haystack.includes(term));
+  });
+
+  return results;
+}
+

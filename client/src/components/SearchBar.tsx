@@ -13,23 +13,33 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   initialQuery = '',
 }) => {
   const [query, setQuery] = useState(initialQuery);
+  const isTypingRef = React.useRef(false);
 
-  // Keep input in sync if parent changes initialQuery (e.g. from trending topics or clear)
+  // Keep input in sync if parent changes initialQuery (e.g. from trending topics or clear button)
   useEffect(() => {
     setQuery(initialQuery);
+    isTypingRef.current = false;
   }, [initialQuery]);
 
-  // Debounced search trigger (300ms)
+  // Debounced search trigger (350ms) ONLY when the user is actively typing
   useEffect(() => {
+    if (!isTypingRef.current) return;
     const timer = setTimeout(() => {
-      onSearch(query);
-    }, 300);
+      onSearch(query.trim());
+      isTypingRef.current = false;
+    }, 350);
 
     return () => clearTimeout(timer);
   }, [query, onSearch]);
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    isTypingRef.current = true;
+    setQuery(e.target.value);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    isTypingRef.current = false;
     onSearch(query.trim());
 
     if (query.trim()) {
@@ -43,6 +53,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   };
 
   const handleClear = () => {
+    isTypingRef.current = false;
     setQuery('');
     onSearch('');
   };
@@ -58,7 +69,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         <input
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={handleChange}
           placeholder={placeholder}
           className="w-full h-9 px-3 text-xs bg-white border border-slate-300 rounded-l focus:outline-none focus:border-blue-600 placeholder:text-slate-400 text-slate-800"
         />

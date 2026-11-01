@@ -17,17 +17,38 @@ export const app = express();
 // High-resolution latency profiling (Server-Timing and X-Response-Time headers)
 app.use(serverTimingMiddleware);
 
-// Security and utility middleware
+// Permissive CORS for deployed Vercel and local environments
 app.use(
   cors({
-    origin: env.CLIENT_URL,
+    origin: (_origin, callback) => {
+      // Allow all origins (standard for public news platform)
+      callback(null, true);
+    },
     credentials: true,
   })
 );
 app.use(express.json());
 
+// Vercel serverless rewrite normalization: restore original path if rewritten to /api
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  if (req.url === '/api' && req.originalUrl && req.originalUrl !== '/api') {
+    req.url = req.originalUrl;
+  }
+  next();
+});
+
 // General API Rate Limiting (120 req / 60s per client)
 app.use('/api', apiRateLimiter);
+
+// Top-level API status
+app.get('/api', (_req: Request, res: Response) => {
+  res.status(200).json({
+    status: 'ok',
+    service: 'yahoo-pulse-api',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+  });
+});
 
 // API Routes
 app.use('/api/health', healthRouter);

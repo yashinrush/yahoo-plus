@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "AI-Powered Personalized News Platform inspired by Yahoo! JAPAN",
   "private": true,
+  "type": "module",
   "workspaces": [
     "client",
     "server"
@@ -16,6 +17,26 @@
     "vercel-build": "prisma generate --schema=server/prisma/schema.prisma && npm run build",
     "start": "node server/dist/server.js",
     "prisma:seed": "npm --prefix server run prisma:seed"
+  },
+  "dependencies": {
+    "@google/genai": "^2.30.0",
+    "@prisma/client": "^6.19.3",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.3",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^24.13.3",
+    "prisma": "^6.19.3",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
   },
   "keywords": [
     "yahoo-japan",

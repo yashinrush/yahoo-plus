@@ -14,10 +14,11 @@ export type SummaryResult = z.infer<typeof summaryResponseSchema> & {
 };
 
 // Initialize Google GenAI client if key exists
+const effectiveGeminiKey = env.GEMINI_API_KEY || process.env.GEMINI_API_KEY;
 let aiClient: GoogleGenAI | null = null;
-if (env.GEMINI_API_KEY) {
+if (effectiveGeminiKey) {
   try {
-    aiClient = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
+    aiClient = new GoogleGenAI({ apiKey: effectiveGeminiKey });
   } catch (err) {
     console.warn('Could not initialize GoogleGenAI client:', err);
   }

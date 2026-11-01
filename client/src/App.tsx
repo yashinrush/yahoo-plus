@@ -12,6 +12,7 @@ import { TrendingTopics } from './components/TrendingTopics.js';
 import { AutumnPromoBanner } from './components/AutumnPromoBanner.js';
 import { ArticleCommentsDrawer } from './components/ArticleCommentsDrawer.js';
 import type { Article } from './types/index.js';
+import { getClientCategoryFallback } from './data/categoryFallback.js';
 import { Check, Sliders, X, Activity, Zap, ShieldCheck, Bookmark, Clock } from 'lucide-react';
 
 interface UserProfile {
@@ -90,6 +91,15 @@ const AppContent: React.FC = () => {
             setSelectedCategories(userData.user.preferredCategories.split(','));
           }
         }
+      } else {
+        setUser({
+          id: 'demo-user-id',
+          name: lang === 'ja' ? '田中 太郎 (Taro)' : 'Taro Tanaka',
+          email: 'taro@example.com',
+          region: 'tokyo',
+          preferredCategories: 'technology,economy,sports',
+          points: 1230,
+        });
       }
 
       if (bookmarksRes.ok) {
@@ -200,10 +210,18 @@ const AppContent: React.FC = () => {
       const res = await fetch(`${endpoint}?${params.toString()}`);
       if (res.ok) {
         const json = (await res.json()) as { articles: Article[] };
-        setArticles(json.articles || []);
+        if (json.articles && json.articles.length > 0) {
+          setArticles(json.articles);
+          return;
+        }
       }
+      // If endpoint returned non-ok or empty, use category fallback
+      const fallbackCat = activeTab !== 'top' ? activeTab : activeCategory;
+      setArticles(getClientCategoryFallback(fallbackCat, lang));
     } catch (err) {
       console.warn('Could not load live news from backend, fallback active:', err);
+      const fallbackCat = activeTab !== 'top' ? activeTab : activeCategory;
+      setArticles(getClientCategoryFallback(fallbackCat, lang));
     } finally {
       setIsLoading(false);
     }

@@ -62,8 +62,12 @@ newsRouter.get('/recommended', async (req: Request, res: Response) => {
     // Default to first user (Taro) if no userId provided
     let activeUserId = typeof userId === 'string' ? userId : undefined;
     if (!activeUserId) {
-      const demoUser = await prisma.user.findFirst();
-      if (demoUser) activeUserId = demoUser.id;
+      try {
+        const demoUser = await prisma.user.findFirst();
+        if (demoUser) activeUserId = demoUser.id;
+      } catch (dbErr) {
+        console.warn('Prisma user lookup skipped in recommended feed:', dbErr);
+      }
     }
 
     const recommended = await getPersonalizedRecommendations({
